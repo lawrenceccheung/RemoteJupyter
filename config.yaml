@@ -42,7 +42,7 @@ inputwidgets:
     inputtype: int
     defaultval: 8080
 
-  - name:  local portnum
+  - name:  localportnum
     label: Local Port Number
     frame:   ServerFrame
     inputtype: int
@@ -54,11 +54,11 @@ inputwidgets:
     inputtype: bool
     defaultval: False
 
-  - name:  launchnbserver
+  - name:  launchservercmd
     label: Start nb server cmd
     frame:   ExpertSettings
     inputtype: str
-    defaultval: "jupyter notebook --no-browser --port={REMOTEPORT}"
+    defaultval: "tmux new -d -s jupyternb 'jupyter {NBLAB} --no-browser --port={REMOTEPORT}'"
     entryopt:
       width:    40
 
@@ -66,7 +66,7 @@ inputwidgets:
     label: Start lab server cmd
     frame:   ExpertSettings
     inputtype: str
-    defaultval: "jupyter notebook --no-browser --port={REMOTEPORT}"
+    defaultval: "jupyter {NBLAB} --no-browser --port={REMOTEPORT}"
     entryopt:
       width:    40
       
@@ -90,7 +90,7 @@ buttons:
   - name: startserver
     text: Start Jupyter Server
     frame:  ButtonFrame
-    command: self.quit
+    command: self.launchserver
 
   - name: listservers
     text: List servers

@@ -8,6 +8,7 @@ sys.path.insert(1, scriptpath)
 
 import tkyamlgui as tkyg
 import argparse
+import subprocess, shlex
 
 class MyApp(tkyg.App, object):
     def __init__(self, *args, **kwargs):
@@ -15,7 +16,21 @@ class MyApp(tkyg.App, object):
                                     geometry="530x400",
                                     leftframeh=350,
                                     *args, **kwargs)
-    
+    def launchserver(self):
+        uselab    = self.inputvars['usejupyterlab'].getval()
+        servercmd = self.inputvars['launchservercmd'].getval()
+        NBLAB     = 'lab' if uselab else 'notebook' 
+        REMOTEPORT= self.inputvars['remoteportnum'].getval()
+        user      = self.inputvars['username'].getval()
+        machine   = self.inputvars['servername'].getval()
+        execmd    = servercmd.format(NBLAB=NBLAB, REMOTEPORT=REMOTEPORT)
+        sshcmd    = "ssh {user}@{machine} "
+        exestring = sshcmd.format(user=user, machine=machine, execmd=execmd)
+        print(shlex.split(exestring))
+
+        subprocess.call(exestring, shell=True)
+
+        return
 
 if __name__ == "__main__":
     title          = 'Remote Jupyter'
