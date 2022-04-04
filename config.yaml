@@ -1,0 +1,121 @@
+tabs:
+  - Server
+  - Expert
+
+frames:
+  - name: ServerFrame
+    tab:  Server
+    row:  1
+    title: Server Settings
+
+  - name: ButtonFrame
+    tab:  Server
+    row:  2
+    title: Actions
+    
+  - name: ExpertSettings
+    tab:  Expert
+    row:  1
+    title: Expert Settings
+    
+
+inputwidgets:
+  - name:  username
+    label: User Name
+    frame:   ServerFrame
+    inputtype: str
+    defaultval: USER
+    entryopt:
+      width:    20
+      
+  - name:  servername
+    label: Server Name
+    frame:   ServerFrame
+    inputtype: str
+    defaultval: ""
+    entryopt:
+      width:    20
+
+  - name:  remoteportnum
+    label: Remote Port Number
+    frame:   ServerFrame
+    inputtype: int
+    defaultval: 8080
+
+  - name:  local portnum
+    label: Local Port Number
+    frame:   ServerFrame
+    inputtype: int
+    defaultval: 8080
+    
+  - name:  usejupyterlab
+    label: Use Jupyter Lab
+    frame:   ServerFrame
+    inputtype: bool
+    defaultval: False
+
+  - name:  launchnbserver
+    label: Start nb server cmd
+    frame:   ExpertSettings
+    inputtype: str
+    defaultval: "jupyter notebook --no-browser --port={REMOTEPORT}"
+    entryopt:
+      width:    40
+
+  - name:  launchlabcmd
+    label: Start lab server cmd
+    frame:   ExpertSettings
+    inputtype: str
+    defaultval: "jupyter notebook --no-browser --port={REMOTEPORT}"
+    entryopt:
+      width:    40
+      
+  - name:  listsessionscmd
+    label: List sessions cmd
+    frame:   ExpertSettings
+    inputtype: str
+    defaultval: "jupyter notebook list"
+    entryopt:
+      width:    40
+
+  - name:  sshforwardcmd
+    label: ssh forward cmd
+    frame:   ExpertSettings
+    inputtype: str
+    defaultval: "ssh -N -f -L localhost:{LOCALPORT}:localhost:{REMOTEPORT} {USER}@{SERVER}"
+    entryopt:
+      width:    40      
+
+buttons:
+  - name: startserver
+    text: Start Jupyter Server
+    frame:  ButtonFrame
+    command: self.quit
+
+  - name: listservers
+    text: List servers
+    frame:  ButtonFrame
+    command: self.quit
+
+  - name: shutdownserver
+    text: Shutdown Jupyter Server
+    frame:  ButtonFrame
+    command: self.quit
+
+  - name: startclient
+    text: Connect to server
+    frame:  ButtonFrame
+    command: self.quit
+  
+# popupwindow:
+
+# listboxpopupwindows:
+
+# setlistboxfromdict:
+      
+# setfromdict:
+
+# Add in any additional yaml files with includes section.
+# ------------
+#includes:
+#  - include1.yaml
