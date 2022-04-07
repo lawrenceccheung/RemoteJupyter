@@ -29,7 +29,10 @@ def ssh(host, cmd, user, password, timeout=30, inputopts='',
         options += ' -f'
     ssh_cmd = 'ssh %s@%s %s "%s"' % (user, host, options, cmd)
     if verbose: print(ssh_cmd)
-    child = pexpect.spawn(ssh_cmd, timeout=timeout)  #spawnu for Python 3
+    if sys.version_info[0] < 3:
+        child = pexpect.spawn(ssh_cmd, timeout=timeout)  
+    else:
+        child = pexpect.spawnu(ssh_cmd, timeout=timeout)  #spawnu for Python 3 
     child.expect(['[pP]assword: '])
     child.sendline(password)
 
@@ -68,7 +71,7 @@ class MyApp(tkyg.App, object):
         machine   = self.inputvars['servername'].getval()
         execmd    = servercmd.format(NBLAB=NBLAB, REMOTEPORT=REMOTEPORT)
         pwd       = self.inputvars['password'].getval()
-        if pwd is '':
+        if pwd == '':
             pwd = getpass.getpass()
         else:
             self.inputvars['editexpertsettings'].setval(False)
@@ -81,7 +84,7 @@ class MyApp(tkyg.App, object):
         machine   = self.inputvars['servername'].getval()
         servercmd = self.inputvars['listsessionscmd'].getval()
         pwd       = self.inputvars['password'].getval()
-        if pwd is '':
+        if pwd == '':
             pwd = getpass.getpass()
         else:
             self.inputvars['editexpertsettings'].setval(False)
@@ -98,7 +101,7 @@ class MyApp(tkyg.App, object):
         NBLAB     = 'lab' if uselab else 'notebook' 
 
         pwd       = self.inputvars['password'].getval()
-        if pwd is '':
+        if pwd == '':
             pwd = getpass.getpass()
         else:
             self.inputvars['editexpertsettings'].setval(False)
@@ -118,7 +121,7 @@ class MyApp(tkyg.App, object):
         opts      = serveropt.format(LOCALPORT=LOCALPORT,
                                      REMOTEPORT=REMOTEPORT)
         pwd       = self.inputvars['password'].getval()
-        if pwd is '':
+        if pwd == '':
             pwd = getpass.getpass()
         else:
             self.inputvars['editexpertsettings'].setval(False)
