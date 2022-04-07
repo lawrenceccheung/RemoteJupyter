@@ -28,7 +28,7 @@ if platform.system()=='Windows':
 
 g_verbose = False
 
-
+# See https://github.com/paramiko/paramiko/blob/main/demos/forward.py
 class ForwardServer(SocketServer.ThreadingTCPServer):
     daemon_threads = True
     allow_reuse_address = True
@@ -224,7 +224,7 @@ class MyApp(tkyg.App, object):
         execmd=''
         print("STARTING CONNECTION")
 
-        
+        sshport = 22
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.WarningPolicy())
@@ -233,7 +233,7 @@ class MyApp(tkyg.App, object):
         try:
             client.connect(
                 machine,
-                22,
+                sshport,
                 username=user,
                 #key_filename=options.keyfile,
                 #look_for_keys=options.look_for_keys,
