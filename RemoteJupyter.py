@@ -8,12 +8,105 @@ sys.path.insert(1, scriptpath)
 
 import tkyamlgui as tkyg
 import argparse
-import subprocess, shlex
+import paramiko
+import socket
+import select
+
+try:
+    import SocketServer
+except ImportError:
+    import socketserver as SocketServer
+    
+#import subprocess, shlex
 import getpass
 import pexpect
 import tempfile
+import platform
 
-def ssh(host, cmd, user, password, timeout=30, inputopts='',
+if platform.system()=='Windows':
+    from pexpect import popen_spawn
+
+g_verbose = False
+
+
+class ForwardServer(SocketServer.ThreadingTCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+class Handler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        try:
+            chan = self.ssh_transport.open_channel(
+                "direct-tcpip",
+                (self.chain_host, self.chain_port),
+                self.request.getpeername(),
+            )
+        except Exception as e:
+            verbose(
+                "Incoming request to %s:%d failed: %s"
+                % (self.chain_host, self.chain_port, repr(e))
+            )
+            return
+        if chan is None:
+            verbose(
+                "Incoming request to %s:%d was rejected by the SSH server."
+                % (self.chain_host, self.chain_port)
+            )
+            return
+
+        verbose(
+            "Connected!  Tunnel open %r -> %r -> %r"
+            % (
+                self.request.getpeername(),
+                chan.getpeername(),
+                (self.chain_host, self.chain_port),
+            )
+        )
+        while True:
+            r, w, x = select.select([self.request, chan], [], [])
+            if self.request in r:
+                data = self.request.recv(1024)
+                if len(data) == 0:
+                    break
+                chan.send(data)
+            if chan in r:
+                data = chan.recv(1024)
+                if len(data) == 0:
+                    break
+                self.request.send(data)
+
+        peername = self.request.getpeername()
+        chan.close()
+        self.request.close()
+        verbose("Tunnel closed from %r" % (peername,))
+
+
+def forward_tunnel(local_port, remote_host, remote_port, transport):
+    # this is a little convoluted, but lets me configure things for the Handler
+    # object.  (SocketServer doesn't give Handlers any way to access the outer
+    # server normally.)
+    class SubHander(Handler):
+        chain_host = remote_host
+        chain_port = remote_port
+        ssh_transport = transport
+    ForwardServer(("", local_port), SubHander).serve_forever()
+
+def verbose(s):
+    if g_verbose:
+        print(s)    
+    
+def ssh(host, cmd, username, password, verbose=False):
+    client = paramiko.client.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, username=username, password=password)
+    _stdin, _stdout,_stderr = client.exec_command(cmd)
+    print(_stdout.read().decode())
+    if verbose: print(_stderr.read().decode())
+    client.close()
+    return 
+
+    
+def ssh2(host, cmd, user, password, timeout=30, inputopts='',
         bg_run=False, verbose=False):
     """SSH'es to a host using the supplied credentials and executes a
     command.  Throws an exception if the command doesn't return 0.
@@ -29,10 +122,13 @@ def ssh(host, cmd, user, password, timeout=30, inputopts='',
         options += ' -f'
     ssh_cmd = 'ssh %s@%s %s "%s"' % (user, host, options, cmd)
     if verbose: print(ssh_cmd)
-    if sys.version_info[0] < 3:
-        child = pexpect.spawn(ssh_cmd, timeout=timeout)  
+    if platform.system() == 'Windows':
+        child = popen_spawn.PopenSpawn(ssh_cmd, timeout=timeout)
     else:
-        child = pexpect.spawnu(ssh_cmd, timeout=timeout)  #spawnu for Python 3 
+        if sys.version_info[0] < 3:
+            child = pexpect.spawn(ssh_cmd, timeout=timeout)  
+        else:
+            child = pexpect.spawnu(ssh_cmd, timeout=timeout)  #spawnu for Python 3 
     child.expect(['[pP]assword: '])
     child.sendline(password)
 
@@ -76,7 +172,7 @@ class MyApp(tkyg.App, object):
         else:
             self.inputvars['editexpertsettings'].setval(False)
         out=ssh(machine, execmd, user, pwd)
-        print(out)
+        #print(out)
         return
 
     def listserver(self):
@@ -89,7 +185,7 @@ class MyApp(tkyg.App, object):
         else:
             self.inputvars['editexpertsettings'].setval(False)
         out=ssh(machine, servercmd, user, pwd)
-        print(out)        
+        #print(out)        
         return
 
     def stopserver(self):
@@ -107,7 +203,7 @@ class MyApp(tkyg.App, object):
             self.inputvars['editexpertsettings'].setval(False)
         execmd = servercmd.format(NBLAB=NBLAB, REMOTEPORT=REMOTEPORT)
         out=ssh(machine, execmd, user, pwd)
-        print(out)        
+        #print(out)        
         return
 
     def startconnect(self):
@@ -127,8 +223,36 @@ class MyApp(tkyg.App, object):
             self.inputvars['editexpertsettings'].setval(False)
         execmd=''
         print("STARTING CONNECTION")
-        out=ssh(machine, execmd, user, pwd, inputopts=opts)
-        print(out)
+
+        
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.WarningPolicy())
+
+        #verbose("Connecting to ssh host %s:%d ..." % (server[0], server[1]))
+        try:
+            client.connect(
+                machine,
+                22,
+                username=user,
+                #key_filename=options.keyfile,
+                #look_for_keys=options.look_for_keys,
+                password=pwd,
+            )
+        except Exception as e:
+            print("*** Failed to connect to %s:%d: %r" % (machine, 22, e))
+            sys.exit(1)
+        
+        try:
+            forward_tunnel(
+                LOCALPORT, 'localhost', REMOTEPORT, client.get_transport()
+            )
+        except KeyboardInterrupt:
+            print("C-c: Port forwarding stopped.")
+            sys.exit(0)
+
+        #out=ssh(machine, execmd, user, pwd, inputopts=opts)
+        #print(out)
         return
     
 if __name__ == "__main__":
