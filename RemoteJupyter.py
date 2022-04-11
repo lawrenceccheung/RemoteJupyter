@@ -172,8 +172,12 @@ class MyApp(tkyg.App, object):
     
     def launchserver(self):
         uselab    = self.inputvars['usejupyterlab'].getval()
-        servercmd = self.inputvars['launchservercmd'].getval()
-        NBLAB     = 'lab' if uselab else 'notebook' 
+        if uselab:
+            NBLAB = 'lab'
+            servercmd = self.inputvars['launchlabcmd'].getval()
+        else:
+            NBLAB = 'notebook'
+            servercmd = self.inputvars['launchservercmd'].getval()
         REMOTEPORT= self.inputvars['remoteportnum'].getval()
         user      = self.inputvars['username'].getval()
         machine   = self.inputvars['servername'].getval()
