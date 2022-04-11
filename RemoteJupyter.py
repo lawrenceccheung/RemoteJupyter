@@ -11,6 +11,8 @@ import argparse
 import paramiko
 import socket
 import select
+import threading
+import traceback
 
 try:
     import SocketServer
@@ -26,7 +28,10 @@ import platform
 if platform.system()=='Windows':
     from pexpect import popen_spawn
 
+t1        = None
 g_verbose = False
+tunnel    = None
+client    = None
 
 # See https://github.com/paramiko/paramiko/blob/main/demos/forward.py
 class ForwardServer(SocketServer.ThreadingTCPServer):
@@ -81,15 +86,18 @@ class Handler(SocketServer.BaseRequestHandler):
         verbose("Tunnel closed from %r" % (peername,))
 
 
-def forward_tunnel(local_port, remote_host, remote_port, transport):
+def forward_tunnel(local_port, remote_host, remote_port, transport, lock):
     # this is a little convoluted, but lets me configure things for the Handler
     # object.  (SocketServer doesn't give Handlers any way to access the outer
     # server normally.)
+    global tunnel
     class SubHander(Handler):
         chain_host = remote_host
         chain_port = remote_port
         ssh_transport = transport
-    ForwardServer(("", local_port), SubHander).serve_forever()
+    lock.acquire()
+    tunnel = ForwardServer(("", local_port), SubHander)
+    tunnel.serve_forever()
 
 def verbose(s):
     if g_verbose:
@@ -149,10 +157,14 @@ def ssh2(host, cmd, user, password, timeout=30, inputopts='',
 class MyApp(tkyg.App, object):
     def __init__(self, *args, **kwargs):
         super(MyApp, self).__init__(dorightframe=False,
-                                    geometry="530x400",
-                                    leftframeh=360,
+                                    geometry="530x430",
+                                    leftframeh=390,
                                     *args, **kwargs)
+        self.report_callback_exception = self.showerror
 
+    def showerror(self, *args):
+        err = traceback.format_exception(*args)
+        
     def editExpertButton(self):
         self.inputvars['password'].setval('')
         self.inputvars['editexpertsettings'].setval(True)
@@ -207,15 +219,16 @@ class MyApp(tkyg.App, object):
         return
 
     def startconnect(self):
+        global t1, tunnel, client
         uselab    = self.inputvars['usejupyterlab'].getval()
         NBLAB     = 'lab' if uselab else 'notebook' 
         REMOTEPORT= self.inputvars['remoteportnum'].getval()
         LOCALPORT = self.inputvars['localportnum'].getval()
         user      = self.inputvars['username'].getval()
         machine   = self.inputvars['servername'].getval()
-        serveropt = self.inputvars['sshforwardopt'].getval()
-        opts      = serveropt.format(LOCALPORT=LOCALPORT,
-                                     REMOTEPORT=REMOTEPORT)
+        # serveropt = self.inputvars['sshforwardopt'].getval()
+        # opts      = serveropt.format(LOCALPORT=LOCALPORT,
+        #                              REMOTEPORT=REMOTEPORT)
         pwd       = self.inputvars['password'].getval()
         if pwd == '':
             pwd = getpass.getpass()
@@ -242,17 +255,35 @@ class MyApp(tkyg.App, object):
         except Exception as e:
             print("*** Failed to connect to %s:%d: %r" % (machine, 22, e))
             sys.exit(1)
-        
-        try:
-            forward_tunnel(
-                LOCALPORT, 'localhost', REMOTEPORT, client.get_transport()
-            )
-        except KeyboardInterrupt:
-            print("C-c: Port forwarding stopped.")
-            sys.exit(0)
+
+        lock = threading.Lock()
+        t1 = threading.Thread(target=forward_tunnel,
+                              daemon=True,
+                              args=(LOCALPORT,
+                                    'localhost',
+                                    REMOTEPORT,
+                                    client.get_transport(),
+                                    lock))
+        t1.start()
+        # try:
+        #     forward_tunnel(
+        #         LOCALPORT, 'localhost', REMOTEPORT, client.get_transport()
+        #     )
+        # except KeyboardInterrupt:
+        #     print("C-c: Port forwarding stopped.")
+        #     sys.exit(0)
 
         #out=ssh(machine, execmd, user, pwd, inputopts=opts)
         #print(out)
+        return
+
+    def stopconnect(self):
+        global t1, tunnel, client
+        #if t1 is not None:
+        print("STOPPING CONNECTION")
+        tunnel.shutdown()
+        client.close()
+        t1.join()
         return
     
 if __name__ == "__main__":

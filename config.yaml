@@ -106,13 +106,13 @@ inputwidgets:
     entryopt:
       width:    40
       
-  - name:  sshforwardopt
-    label: ssh forward opts
-    frame:   ExpertSettings
-    inputtype: str
-    defaultval: "-N -f -L localhost:{LOCALPORT}:localhost:{REMOTEPORT}"
-    entryopt:
-      width:    40      
+  # - name:  sshforwardopt
+  #   label: ssh forward opts
+  #   frame:   ExpertSettings
+  #   inputtype: str
+  #   defaultval: "-N -f -L localhost:{LOCALPORT}:localhost:{REMOTEPORT}"
+  #   entryopt:
+  #     width:    40      
       
 buttons:
   - name: startserver
@@ -134,6 +134,11 @@ buttons:
     text: Connect to Server
     frame:  ButtonFrame
     command: self.startconnect
+
+  - name: stopclient
+    text: Stop connections
+    frame:  ButtonFrame
+    command: self.stopconnect
 
   - name: editexpertbutton
     text: Edit expert settings
