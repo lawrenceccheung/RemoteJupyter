@@ -198,13 +198,21 @@ class MyApp(tkyg.App, object):
         filemenu = Tk.Menu(menubar, tearoff=0)
         filemenu.add_command(label="Save settings", 
                              command=self.savesettings)
+        filemenu.add_command(label="Save settings as...", 
+                             command=self.savesettingsGUI)
         filemenu.add_command(label="Load settings", 
                              command=self.loadsettings)
+        filemenu.add_command(label="Load settings from...", 
+                             command=self.loadsettingsGUI)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=root.quit)
         menubar.add_cascade(label="File", menu=filemenu)
         # Help menu
-        help_text = """ Remote Jupyter app """
+        help_text ="""
+ Remote Jupyter app 
+        by
+ Lawrence Cheung 
+"""
         helpmenu = Tk.Menu(menubar, tearoff=0)
         helpmenu.add_command(label="About...", 
                              command=partial(tkyg.messagewindow, root,
@@ -279,9 +287,6 @@ class MyApp(tkyg.App, object):
         LOCALPORT = self.inputvars['localportnum'].getval()
         user      = self.inputvars['username'].getval()
         machine   = self.inputvars['servername'].getval()
-        # serveropt = self.inputvars['sshforwardopt'].getval()
-        # opts      = serveropt.format(LOCALPORT=LOCALPORT,
-        #                              REMOTEPORT=REMOTEPORT)
         pwd       = self.inputvars['password'].getval()
         if pwd == '':
             pwd = getpass.getpass()
@@ -318,13 +323,6 @@ class MyApp(tkyg.App, object):
                                     client.get_transport(),
                                     lock))
         t1.start()
-        # try:
-        #     forward_tunnel(
-        #         LOCALPORT, 'localhost', REMOTEPORT, client.get_transport()
-        #     )
-        # except KeyboardInterrupt:
-        #     print("C-c: Port forwarding stopped.")
-        #     sys.exit(0)
 
         #out=ssh(machine, execmd, user, pwd, inputopts=opts)
         #print(out)
@@ -341,10 +339,20 @@ class MyApp(tkyg.App, object):
 
     def savesettings(self, filename='default.yaml'):
         tag = 'savename'
-        savedict = dict(self.getDictFromInputs(tag))
+        savedict = dict(self.getDictFromInputs(tag, onlyactive=False))
         outfile = sys.stdout if filename == sys.stdout else open(filename, 'w')
         yaml.dump(savedict, outfile, **dumperkwargs)
         outfile.close()
+        return
+
+    def savesettingsGUI(self):
+        filename  = filedialog.asksaveasfilename(initialdir = "./",
+                                                 title = "Save settings file",
+                                                 filetypes=[("yaml files",
+                                                             "*.yaml"),
+                                                            ("all files","*.*")
+                                                 ])
+        if len(filename)>0: self.savesettings(filename=filename)
         return
 
     def loadsettings(self, filename='default.yaml'):
@@ -356,6 +364,14 @@ class MyApp(tkyg.App, object):
             else:         Loader=yaml.safe_load
             yamldict = dict(Loader(fp, **loaderkwargs))
         self.setinputfromdict(tag, yamldict)
+        return
+
+    def loadsettingsGUI(self):
+        kwargs = {'filetypes':[("YAML files","*.yaml"), ("all files","*.*")]}
+        filename  = filedialog.askopenfilename(initialdir = "./",
+                                               title = "Select save file",
+                                               **kwargs)
+        if len(filename)>0: self.loadsettings(filename=filename)
         return
     
 if __name__ == "__main__":

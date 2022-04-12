@@ -91,6 +91,8 @@ inputwidgets:
     defaultval: "tmux new -d -s jupyternb 'jupyter {NBLAB} --no-browser --port={REMOTEPORT}'"
     entryopt:
       width:    40
+    outputdef:
+      savename: launchservercmd
 
   - name:  launchlabcmd
     label: Start lab server cmd
@@ -99,6 +101,8 @@ inputwidgets:
     defaultval: "jupyter {NBLAB} --no-browser --port={REMOTEPORT}"
     entryopt:
       width:    40
+    outputdef:
+      savename: launchlabcmd
       
   - name:  listsessionscmd
     label: List sessions cmd
@@ -107,6 +111,8 @@ inputwidgets:
     defaultval: "jupyter notebook list"
     entryopt:
       width:    40
+    outputdef:
+      savename: listsessionscmd
 
   - name:  stopsessionscmd
     label: Stop sessions cmd
@@ -115,6 +121,8 @@ inputwidgets:
     defaultval: "jupyter {NBLAB} stop {REMOTEPORT}; tmux kill-session -t 0"
     entryopt:
       width:    40
+    outputdef:
+      savename: stopsessionscmd
       
 buttons:
   - name: startserver
