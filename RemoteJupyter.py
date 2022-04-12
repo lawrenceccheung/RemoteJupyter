@@ -381,12 +381,14 @@ if __name__ == "__main__":
 
     # Check the command line arguments
     parser         = argparse.ArgumentParser(description=title)
+    parser.add_argument('settingsfile', nargs='?', default='default.yaml')
     parser.add_argument('--localconfigdir',   
                         default=localconfigdir,  
                         help="Local configuration directory [default: %s]"%localconfigdir)
 
     args           = parser.parse_args()
     localconfigdir = args.localconfigdir
+    settingsfile   = args.settingsfile
     
     # Instantiate the app
     mainapp=MyApp(configyaml=os.path.join(scriptpath,configfile), 
@@ -394,5 +396,8 @@ if __name__ == "__main__":
                   scriptpath=scriptpath,
                   title=title)
     mainapp.notebook.enable_traversal()
+    if os.path.exists(settingsfile):
+        #print("Loading settings from "+settingsfile)
+        mainapp.loadsettings(filename=settingsfile)
     mainapp.mainloop()
 
