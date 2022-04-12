@@ -13,12 +13,34 @@ import socket
 import select
 import threading
 import traceback
+from functools import partial
 
 try:
     import SocketServer
 except ImportError:
     import socketserver as SocketServer
-    
+
+if sys.version_info[0] < 3:
+    import Tkinter as Tk
+    import tkFileDialog as filedialog
+else:
+    import tkinter as Tk
+    from tkinter import filedialog as filedialog
+
+# Load ruamel or pyyaml as needed
+try:
+    import ruamel.yaml as yaml
+    #print("# Loaded ruamel.yaml")
+    useruamel=True
+    loaderkwargs = {'Loader':yaml.RoundTripLoader}
+    dumperkwargs = {'Dumper':yaml.RoundTripDumper, 'indent':4, 'default_flow_style':False} # 'block_seq_indent':2, 'line_break':0, 'explicit_start':True, 
+except:
+    import yaml as yaml
+    #print("# Loaded yaml")
+    useruamel=False
+    loaderkwargs = {}
+    dumperkwargs = {'default_flow_style':False }
+
 #import subprocess, shlex
 import getpass
 import pexpect
@@ -164,7 +186,34 @@ class MyApp(tkyg.App, object):
 
     def showerror(self, *args):
         err = traceback.format_exception(*args)
+
+    def menubar(self, root):
+        """ 
+        Adds a menu bar to root
+        See https://www.tutorialspoint.com/python/tk_menu.htm
+        """
+        menubar  = Tk.Menu(root)
+
+        # File menu
+        filemenu = Tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="Save settings", 
+                             command=self.savesettings)
+        filemenu.add_command(label="Load settings", 
+                             command=self.loadsettings)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=root.quit)
+        menubar.add_cascade(label="File", menu=filemenu)
+        # Help menu
+        help_text = """ Remote Jupyter app """
+        helpmenu = Tk.Menu(menubar, tearoff=0)
+        helpmenu.add_command(label="About...", 
+                             command=partial(tkyg.messagewindow, root,
+                                             help_text))
+        menubar.add_cascade(label="Help", menu=helpmenu)
         
+        root.config(menu=menubar)
+        return
+
     def editExpertButton(self):
         self.inputvars['password'].setval('')
         self.inputvars['editexpertsettings'].setval(True)
@@ -288,6 +337,25 @@ class MyApp(tkyg.App, object):
         tunnel.shutdown()
         client.close()
         t1.join()
+        return
+
+    def savesettings(self, filename='default.yaml'):
+        tag = 'savename'
+        savedict = dict(self.getDictFromInputs(tag))
+        outfile = sys.stdout if filename == sys.stdout else open(filename, 'w')
+        yaml.dump(savedict, outfile, **dumperkwargs)
+        outfile.close()
+        return
+
+    def loadsettings(self, filename='default.yaml'):
+        yamldict = {}
+        tag = 'savename'
+        # Load the yaml input file
+        with open(filename, 'r') as fp:
+            if useruamel: Loader=yaml.load
+            else:         Loader=yaml.safe_load
+            yamldict = dict(Loader(fp, **loaderkwargs))
+        self.setinputfromdict(tag, yamldict)
         return
     
 if __name__ == "__main__":

@@ -27,6 +27,8 @@ inputwidgets:
     defaultval: USER
     entryopt:
       width:    25
+    outputdef:
+      savename: username
       
   - name:  servername
     label: Server Name
@@ -35,6 +37,8 @@ inputwidgets:
     defaultval: ""
     entryopt:
       width:    25
+    outputdef:
+      savename: servername
 
   - name:  password
     label: Password
@@ -50,18 +54,24 @@ inputwidgets:
     frame:   ServerFrame
     inputtype: int
     defaultval: 8080
+    outputdef:
+      savename: remoteportnum
 
   - name:  localportnum
     label: Local Port Number
     frame:   ServerFrame
     inputtype: int
     defaultval: 8080
+    outputdef:
+      savename: localportnum
     
   - name:  usejupyterlab
     label: Use Jupyter Lab
     frame:   ServerFrame
     inputtype: bool
     defaultval: False
+    outputdef:
+      savename: usejupyterlab
 
   - name:  editexpertsettings
     label: Edit expert settings
@@ -105,14 +115,6 @@ inputwidgets:
     defaultval: "jupyter {NBLAB} stop {REMOTEPORT}; tmux kill-session -t 0"
     entryopt:
       width:    40
-      
-  # - name:  sshforwardopt
-  #   label: ssh forward opts
-  #   frame:   ExpertSettings
-  #   inputtype: str
-  #   defaultval: "-N -f -L localhost:{LOCALPORT}:localhost:{REMOTEPORT}"
-  #   entryopt:
-  #     width:    40      
       
 buttons:
   - name: startserver
