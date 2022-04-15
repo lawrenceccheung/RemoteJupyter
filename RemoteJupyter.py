@@ -54,6 +54,7 @@ t1        = None
 g_verbose = False
 tunnel    = None
 client    = None
+connectdict = {}
 
 # See https://github.com/paramiko/paramiko/blob/main/demos/forward.py
 class ForwardServer(SocketServer.ThreadingTCPServer):
@@ -110,18 +111,22 @@ class Handler(SocketServer.BaseRequestHandler):
         verbose("Tunnel closed from %r" % (peername,))
 
 
-def forward_tunnel(local_port, remote_host, remote_port, transport, lock):
+def forward_tunnel(local_port, remote_host, remote_port, transport, lock, key):
     # this is a little convoluted, but lets me configure things for the Handler
     # object.  (SocketServer doesn't give Handlers any way to access the outer
     # server normally.)
-    global tunnel
+    global tunnel, connectdict
     class SubHander(Handler):
         chain_host = remote_host
         chain_port = remote_port
         ssh_transport = transport
     lock.acquire()
-    tunnel = ForwardServer(("", local_port), SubHander)
-    tunnel.serve_forever()
+    #key = remote_host+':'+repr(remote_port)
+    #print("Connectdict: ",connectdict)
+    connectdict[key]['tunnel'] = ForwardServer(("", local_port), SubHander)
+    connectdict[key]['tunnel'].serve_forever()
+    #tunnel = ForwardServer(("", local_port), SubHander)
+    #tunnel.serve_forever()
 
 def verbose(s):
     if g_verbose:
@@ -282,7 +287,7 @@ class MyApp(tkyg.App, object):
         return
 
     def startconnect(self):
-        global t1, tunnel, client
+        global t1, tunnel, client, connectdict
         uselab    = self.inputvars['usejupyterlab'].getval()
         NBLAB     = 'lab' if uselab else 'notebook' 
         REMOTEPORT= self.inputvars['remoteportnum'].getval()
@@ -295,16 +300,22 @@ class MyApp(tkyg.App, object):
         else:
             self.inputvars['editexpertsettings'].setval(False)
         execmd=''
-        print("STARTING CONNECTION")
 
         sshport = 22
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.WarningPolicy())
-
+        key = machine+':'+repr(REMOTEPORT)
+        print("STARTING CONNECTION "+key)
+        connectdict[key] = {}
+        connectdict[key]['client'] = paramiko.SSHClient()
+        #clientX = connectdict[key]['client']
+        #client = paramiko.SSHClient()
+        #clientX.load_system_host_keys()
+        #clientX.set_missing_host_key_policy(paramiko.WarningPolicy())
+        connectdict[key]['client'].load_system_host_keys()
+        connectdict[key]['client'].set_missing_host_key_policy(paramiko.WarningPolicy())
         #verbose("Connecting to ssh host %s:%d ..." % (server[0], server[1]))
         try:
-            client.connect(
+            #client.connect(
+            connectdict[key]['client'].connect(
                 machine,
                 sshport,
                 username=user,
@@ -317,26 +328,34 @@ class MyApp(tkyg.App, object):
             sys.exit(1)
 
         lock = threading.Lock()
-        t1 = threading.Thread(target=forward_tunnel,
+        #t1 = threading.Thread(target=forward_tunnel,
+        connectdict[key]['thread'] = threading.Thread(target=forward_tunnel,
                               daemon=True,
                               args=(LOCALPORT,
                                     'localhost',
                                     REMOTEPORT,
-                                    client.get_transport(),
-                                    lock))
-        t1.start()
-
+                                    connectdict[key]['client'].get_transport(),
+                                    lock,
+                                    key))
+        #t1.start()
+        connectdict[key]['thread'].start()
         #out=ssh(machine, execmd, user, pwd, inputopts=opts)
         #print(out)
         return
 
     def stopconnect(self):
-        global t1, tunnel, client
-        #if t1 is not None:
-        print("STOPPING CONNECTION")
-        tunnel.shutdown()
-        client.close()
-        t1.join()
+        global connectdict
+        for key, connect in connectdict.items():
+            print("STOPPING CONNECTION "+key)
+            connect['tunnel'].shutdown()
+            connect['client'].close()
+            connect['thread'].join()
+        # global t1, tunnel, client, connectdict
+        # #if t1 is not None:
+        # print("STOPPING CONNECTION")
+        # tunnel.shutdown()
+        # client.close()
+        # t1.join()
         return
 
     def savesettings(self, filename='default.yaml'):
