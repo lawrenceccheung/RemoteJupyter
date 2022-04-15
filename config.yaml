@@ -8,11 +8,27 @@ frames:
     row:  1
     title: Server Settings
 
-  - name: ButtonFrame
+  - name: BottomFrame
     tab:  Server
     row:  2
+    #title: Actions  
+    kwargs:
+      borderwidth: 0
+      padx: 0
+      pady: 0
+
+  - name: ButtonFrame
+    #tab:  Server
+    frame: BottomFrame
+    row:  0
     title: Actions
-    
+
+  - name: ConnectFrame
+    frame:  BottomFrame
+    row:  0
+    col:  4
+    title: Active Connections
+
   - name: ExpertSettings
     tab:  Expert
     row:  2
@@ -72,6 +88,17 @@ inputwidgets:
     defaultval: False
     outputdef:
       savename: usejupyterlab
+
+  - name:  activeconnections
+    label: 
+    frame:   ConnectFrame
+    inputtype: listbox
+    #optionlist: 
+    listboxopt: 
+      selectmode: multiple
+      height:   8
+      width:    20
+
 
   - name:  editexpertsettings
     label: Edit expert settings
