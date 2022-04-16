@@ -229,6 +229,13 @@ class MyApp(tkyg.App, object):
         root.config(menu=menubar)
         return
 
+    def refreshConnections(self):
+        # Get the list of connections
+        global connectdict
+        connectlist = [k for k,g in connectdict.items()]
+        self.inputvars['activeconnections'].refresh_listbox(connectlist)
+        return
+
     def editExpertButton(self):
         self.inputvars['password'].setval('')
         self.inputvars['editexpertsettings'].setval(True)
@@ -339,6 +346,7 @@ class MyApp(tkyg.App, object):
                                     key))
         #t1.start()
         connectdict[key]['thread'].start()
+        self.refreshConnections()
         #out=ssh(machine, execmd, user, pwd, inputopts=opts)
         #print(out)
         return
@@ -350,6 +358,8 @@ class MyApp(tkyg.App, object):
             connect['tunnel'].shutdown()
             connect['client'].close()
             connect['thread'].join()
+        connectdict = {}
+        self.refreshConnections()
         # global t1, tunnel, client, connectdict
         # #if t1 is not None:
         # print("STOPPING CONNECTION")

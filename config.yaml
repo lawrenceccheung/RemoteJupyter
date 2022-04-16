@@ -97,7 +97,7 @@ inputwidgets:
     listboxopt: 
       selectmode: multiple
       height:   8
-      width:    20
+      width:    30
 
 
   - name:  editexpertsettings
@@ -173,7 +173,7 @@ buttons:
     command: self.startconnect
 
   - name: stopclient
-    text: Stop connections
+    text: Stop all connections
     frame:  ButtonFrame
     command: self.stopconnect
 
